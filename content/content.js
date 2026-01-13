@@ -83,7 +83,24 @@
         });
       });
       ['onclick','onerror','onload'].forEach(a => { 
-        const els = document.querySelectorAll(`[${a}]`);
+        let els = Array.from(document.querySelectorAll(`[${a}]`));
+        
+        // Filtrer les patterns légitimes (faux positifs)
+        els = els.filter(el => {
+          const handler = el.getAttribute(a) || '';
+          const tag = el.tagName.toLowerCase();
+          
+          // Pattern loadCSS: <link onload="this.onload=null;this.rel='stylesheet'">
+          if (tag === 'link' && a === 'onload' && /this\.onload\s*=\s*null/.test(handler)) {
+            return false;
+          }
+          // Pattern image onload pour lazy loading
+          if (tag === 'img' && a === 'onload' && /this\.onload\s*=\s*null/.test(handler)) {
+            return false;
+          }
+          return true;
+        });
+        
         if (els.length) {
           const first = els[0];
           const tag = first.tagName.toLowerCase();

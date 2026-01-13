@@ -303,7 +303,7 @@ h1 span { color: var(--accent); }
   font-size: 11px;
 }
 
-.headers-list li, .risk-list li {
+.headers-list li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -311,14 +311,22 @@ h1 span { color: var(--accent); }
   border-bottom: 1px solid var(--gray-100);
 }
 
-.headers-list li:last-child, .risk-list li:last-child { border-bottom: none; }
+.headers-list li:last-child { border-bottom: none; }
 
 .header-present { color: var(--success); font-weight: 700; }
 .header-missing { color: var(--danger); font-weight: 700; }
 
+/* Risk list */
+.risk-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
 /* Risk items */
 .risk-item {
-  padding: 8px 0;
+  display: block;
+  padding: 10px 0;
   border-bottom: 1px solid var(--gray-100);
 }
 
@@ -338,14 +346,16 @@ h1 span { color: var(--accent); }
 }
 
 .risk-location {
+  display: block;
   font-size: 11px;
   color: var(--gray-500);
-  margin-top: 4px;
+  margin-top: 6px;
   padding-left: 4px;
 }
 
 .risk-code {
-  margin-top: 6px;
+  display: block;
+  margin-top: 8px;
   padding: 8px 10px;
   background: var(--gray-900);
   color: #e5e7eb;
