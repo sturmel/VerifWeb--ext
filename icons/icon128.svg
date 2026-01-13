@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ff88;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Shield background -->
+  <path fill="url(#grad1)" d="M50 5 L15 20 L15 45 C15 70 30 88 50 95 C70 88 85 70 85 45 L85 20 Z"/>
+  <!-- Inner shield (darker) -->
+  <path fill="#1a1a2e" d="M50 12 L22 24 L22 45 C22 66 34 81 50 87 C66 81 78 66 78 45 L78 24 Z"/>
+  <!-- Checkmark -->
+  <path fill="url(#grad1)" d="M44 55 L36 47 L31 52 L44 65 L69 40 L64 35 Z"/>
+</svg>

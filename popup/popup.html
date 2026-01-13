@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerifWeb - Security Checker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="shield-icon">🛡️</span>
+        <h1>VerifWeb</h1>
+      </div>
+      <p class="tagline">Analyse de sécurité</p>
+    </header>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Analyse en cours...</p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="site-info">
+        <h2 id="site-url">-</h2>
+        <div id="global-score" class="score">
+          <span class="score-value">-</span>
+          <span class="score-label">/ 100</span>
+        </div>
+      </div>
+
+      <div class="tests-container">
+        <!-- HTTPS Check -->
+        <div class="test-item" id="test-https">
+          <div class="test-header">
+            <span class="test-icon">🔒</span>
+            <span class="test-name">Connexion HTTPS</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+        </div>
+
+        <!-- SSL Certificate -->
+        <div class="test-item" id="test-ssl">
+          <div class="test-header">
+            <span class="test-icon">📜</span>
+            <span class="test-name">Certificat SSL</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+        </div>
+
+        <!-- Cookies Analysis -->
+        <div class="test-item" id="test-cookies">
+          <div class="test-header">
+            <span class="test-icon">🍪</span>
+            <span class="test-name">Cookies</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+          <div class="test-details hidden">
+            <table class="cookies-table">
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Secure</th>
+                  <th>HttpOnly</th>
+                  <th>SameSite</th>
+                </tr>
+              </thead>
+              <tbody id="cookies-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Security Headers -->
+        <div class="test-item" id="test-headers">
+          <div class="test-header">
+            <span class="test-icon">📋</span>
+            <span class="test-name">Headers de sécurité</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+          <div class="test-details hidden">
+            <ul id="headers-list" class="headers-list"></ul>
+          </div>
+        </div>
+
+        <!-- Mixed Content -->
+        <div class="test-item" id="test-mixed-content">
+          <div class="test-header">
+            <span class="test-icon">⚠️</span>
+            <span class="test-name">Contenu mixte</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+        </div>
+
+        <!-- Third Party Resources -->
+        <div class="test-item" id="test-third-party">
+          <div class="test-header">
+            <span class="test-icon">🌐</span>
+            <span class="test-name">Ressources tierces</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+        </div>
+
+        <!-- Local Storage -->
+        <div class="test-item" id="test-storage">
+          <div class="test-header">
+            <span class="test-icon">💾</span>
+            <span class="test-name">Stockage local</span>
+            <span class="test-status">-</span>
+          </div>
+          <p class="test-description"></p>
+        </div>
+      </div>
+
+      <button id="refresh-btn" class="refresh-btn">
+        🔄 Relancer l'analyse
+      </button>
+    </div>
+
+    <footer>
+      <p>VerifWeb v1.0.0</p>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
