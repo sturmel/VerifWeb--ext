@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Fond bouclier -->
+  <path d="M64 4 C20 18 12 22 12 22 L12 58 C12 92 36 116 64 126 C92 116 116 92 116 58 L116 22 C116 22 108 18 64 4 Z" fill="#0a369d"/>
+  
+  <!-- Bouclier intérieur -->
+  <path d="M64 14 C26 26 20 30 20 30 L20 56 C20 86 40 106 64 116 C88 106 108 86 108 56 L108 30 C108 30 102 26 64 14 Z" fill="#1e4fc2"/>
+  
+  <!-- Cercle blanc -->
+  <circle cx="64" cy="58" r="30" fill="#ffffff"/>
+  
+  <!-- Check orange -->
+  <path d="M46 62 L58 78 L84 48" stroke="#f58a07" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
