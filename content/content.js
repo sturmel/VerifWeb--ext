@@ -16,6 +16,20 @@
     const sum = [c && `${c} critique(s)`, h && `${h} élevé(s)`, m && `${m} moyen(s)`].filter(Boolean).join(', ');
     return { status, message: `${cat}: ${risks.length} risque(s) - ${sum || 'faibles'}`, details: risks };
   };
+  
+  // Extrait un snippet de code autour d'un pattern
+  const extractSnippet = (content, pattern, ctx = 40) => {
+    const match = content.match(new RegExp(pattern.source || pattern));
+    if (!match) return null;
+    const idx = content.indexOf(match[0]);
+    if (idx === -1) return null;
+    const start = Math.max(0, idx - ctx);
+    const end = Math.min(content.length, idx + match[0].length + ctx);
+    let s = content.substring(start, end).trim().replace(/\s+/g, ' ');
+    if (start > 0) s = '...' + s;
+    if (end < content.length) s = s + '...';
+    return s;
+  };
 
   // Import dynamique des analyseurs (inline pour compatibilité content script)
   const Analyzers = {
@@ -53,14 +67,46 @@
 
     xss: () => {
       const risks = [];
-      const patterns = [[/innerHTML\s*=/,'high','innerHTML'],[/eval\s*\(/,'critical','eval()'],[/document\.write\s*\(/,'high','document.write'],[/new\s+Function\s*\(/,'critical','new Function()']];
+      const patterns = [[/innerHTML\s*=/,'high','innerHTML (risque XSS)'],[/eval\s*\(/,'critical','eval() - exécution de code'],[/document\.write\s*\(/,'high','document.write'],[/new\s+Function\s*\(/,'critical','new Function()']];
       document.querySelectorAll('script:not([src])').forEach((s,i) => {
         const c = s.textContent || '';
-        patterns.forEach(([p,r,d]) => { if (p.test(c)) risks.push({ type: 'script', risk: r, description: d, location: `#${i+1}` }); });
+        patterns.forEach(([p,r,d]) => { 
+          if (p.test(c)) {
+            risks.push({ 
+              type: 'script', 
+              risk: r, 
+              description: d, 
+              location: `Script inline #${i+1}`,
+              code: extractSnippet(c, p)
+            }); 
+          }
+        });
       });
-      ['onclick','onerror','onload'].forEach(a => { const n = document.querySelectorAll(`[${a}]`).length; if (n) risks.push({ type: 'handler', risk: 'medium', description: `${n}× ${a}` }); });
-      const js = document.querySelectorAll('[href^="javascript:"]').length;
-      if (js) risks.push({ type: 'js-url', risk: 'high', description: `${js} lien(s) javascript:` });
+      ['onclick','onerror','onload'].forEach(a => { 
+        const els = document.querySelectorAll(`[${a}]`);
+        if (els.length) {
+          const first = els[0];
+          const tag = first.tagName.toLowerCase();
+          const sample = first.getAttribute(a).substring(0, 50);
+          risks.push({ 
+            type: 'handler', 
+            risk: 'medium', 
+            description: `${els.length}× attribut ${a}`,
+            location: `<${tag}>`,
+            code: `<${tag} ${a}="${sample}${sample.length >= 50 ? '...' : ''}">`
+          }); 
+        }
+      });
+      const jsLinks = document.querySelectorAll('[href^="javascript:"]');
+      if (jsLinks.length) {
+        const first = jsLinks[0];
+        risks.push({ 
+          type: 'js-url', 
+          risk: 'high', 
+          description: `${jsLinks.length} lien(s) javascript:`,
+          code: `<a href="${first.getAttribute('href').substring(0, 60)}...">`
+        });
+      }
       return summarizeRisks(risks, 'XSS');
     },
 
@@ -68,45 +114,92 @@
       const risks = [], forms = document.querySelectorAll('form');
       if (!forms.length) return { status: 'info', message: 'Aucun formulaire', details: [] };
       forms.forEach((f,i) => {
-        // Détecter si géré par JavaScript (Vue, React, Angular, vanilla)
-        // Note: Vue/React compilent les attributs donc on vérifie aussi si onsubmit est attaché programmatiquement
         const hasJsHandler = f.onsubmit !== null || 
                              f.hasAttribute('@submit') || f.hasAttribute('@submit.prevent') || 
                              f.hasAttribute('v-on:submit') || f.hasAttribute('ng-submit');
-        // Heuristique: si action vide/absente et pas de method explicite, probablement géré par JS
         const noRealAction = !f.getAttribute('action') || f.getAttribute('action') === '' || f.getAttribute('action') === '#';
         const isJs = hasJsHandler || noRealAction;
+        const formId = f.id ? `#${f.id}` : (f.name ? `[name="${f.name}"]` : `Form #${i+1}`);
+        const formCode = `<form${f.id ? ` id="${f.id}"` : ''}${f.getAttribute('action') ? ` action="${f.getAttribute('action')}"` : ''} method="${f.method}">`;
         
         if (f.action?.startsWith('http://') && location.protocol === 'https:') 
-          risks.push({ type: 'http-action', risk: 'critical', description: `Form #${i+1}: action HTTP` });
+          risks.push({ type: 'http-action', risk: 'critical', description: `${formId}: action HTTP non sécurisée`, location: formId, code: formCode });
         
-        // Sensible en GET uniquement si pas géré par JS
         const hasSensitive = f.querySelector('input[type="password"]') || f.querySelector('input[type="email"]');
         if (hasSensitive && f.method.toUpperCase() === 'GET' && !isJs) 
-          risks.push({ type: 'get', risk: 'high', description: `Form #${i+1}: sensible en GET` });
+          risks.push({ type: 'get', risk: 'high', description: `${formId}: données sensibles en GET`, location: formId, code: formCode });
         
-        // CSRF uniquement pour vrais POST (pas JS)
         const csrf = [...f.querySelectorAll('input[type="hidden"]')].some(x => /csrf|token|xsrf/i.test(x.name || ''));
         if (!csrf && f.method.toUpperCase() === 'POST' && !isJs) 
-          risks.push({ type: 'csrf', risk: 'medium', description: `Form #${i+1}: pas de CSRF` });
+          risks.push({ type: 'csrf', risk: 'medium', description: `${formId}: pas de token CSRF visible`, location: formId, code: formCode });
       });
       return summarizeRisks(risks, 'Formulaires');
     },
 
     sql: () => {
       const risks = [], html = document.documentElement.outerHTML;
-      [/SQL syntax.*MySQL/i,/PostgreSQL.*ERROR/i,/ORA-\d{5}/i,/SQLite.*error/i].forEach(p => { if (p.test(html)) risks.push({ type: 'sql-error', risk: 'critical', description: 'Erreur SQL exposée' }); });
-      (html.match(/<!--[\s\S]*?-->/g) || []).forEach(c => { if (/password|secret|api_key|token/i.test(c)) risks.push({ type: 'comment', risk: 'high', description: 'Commentaire sensible' }); });
+      // Patterns d'erreurs SQL réelles (plus stricts pour éviter les faux positifs)
+      const sqlErrorPatterns = [
+        { pattern: /You have an error in your SQL syntax/i, db: 'MySQL' },
+        { pattern: /mysql_fetch|mysql_query|mysqli_/i, db: 'MySQL' },
+        { pattern: /ERROR:\s+syntax error at or near/i, db: 'PostgreSQL' },
+        { pattern: /pg_query|pg_exec|PG::Error/i, db: 'PostgreSQL' },
+        { pattern: /ORA-\d{5}:/i, db: 'Oracle' },
+        { pattern: /SQLite3::SQLException/i, db: 'SQLite' },
+        { pattern: /SQLSTATE\[\d+\]/i, db: 'SQL' },
+        { pattern: /Unclosed quotation mark/i, db: 'SQL Server' },
+        { pattern: /quoted string not properly terminated/i, db: 'SQL' }
+      ];
+      sqlErrorPatterns.forEach(({ pattern, db }) => { 
+        if (pattern.test(html)) {
+          const match = html.match(pattern);
+          risks.push({ 
+            type: 'sql-error', 
+            risk: 'critical', 
+            description: `Erreur ${db} exposée`,
+            code: match ? match[0].substring(0, 80) : null
+          }); 
+        }
+      });
+      // Commentaires HTML sensibles
+      (html.match(/<!--[\s\S]*?-->/g) || []).forEach(c => { 
+        if (/password\s*=|secret\s*=|api_key\s*=|token\s*=/i.test(c)) {
+          risks.push({ 
+            type: 'comment', 
+            risk: 'high', 
+            description: 'Commentaire sensible',
+            code: c.substring(0, 100) + (c.length > 100 ? '...' : '')
+          }); 
+        }
+      });
       return summarizeRisks(risks, 'SQL/Données');
     },
 
     domXss: () => {
       const risks = [];
-      const sources = [/location\.(hash|search|href)/g, /document\.(URL|referrer)/g];
-      const sinks = [/\.innerHTML\s*=/g, /eval\s*\(/g, /document\.write/g];
-      document.querySelectorAll('script:not([src])').forEach(s => {
+      const sources = [
+        { pattern: /location\.(hash|search|href)/g, name: 'location.*' },
+        { pattern: /document\.(URL|referrer)/g, name: 'document.URL/referrer' }
+      ];
+      const sinks = [
+        { pattern: /\.innerHTML\s*=/g, name: 'innerHTML' },
+        { pattern: /eval\s*\(/g, name: 'eval()' },
+        { pattern: /document\.write/g, name: 'document.write' }
+      ];
+      document.querySelectorAll('script:not([src])').forEach((s, i) => {
         const c = s.textContent || '';
-        if (sources.some(p => p.test(c)) && sinks.some(p => p.test(c))) risks.push({ type: 'flow', risk: 'high', description: 'Flux source→sink' });
+        const foundSrc = sources.filter(x => x.pattern.test(c));
+        const foundSink = sinks.filter(x => x.pattern.test(c));
+        if (foundSrc.length && foundSink.length) {
+          const snippet = extractSnippet(c, foundSink[0].pattern);
+          risks.push({ 
+            type: 'flow', 
+            risk: 'high', 
+            description: `Flux DOM XSS: ${foundSrc.map(x=>x.name).join(', ')} → ${foundSink.map(x=>x.name).join(', ')}`,
+            location: `Script inline #${i+1}`,
+            code: snippet
+          });
+        }
       });
       return summarizeRisks(risks, 'DOM XSS');
     },

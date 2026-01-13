@@ -316,12 +316,55 @@ h1 span { color: var(--accent); }
 .header-present { color: var(--success); font-weight: 700; }
 .header-missing { color: var(--danger); font-weight: 700; }
 
+/* Risk items */
+.risk-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.risk-item:last-child {
+  border-bottom: none;
+}
+
+.risk-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.risk-desc {
+  font-size: 12px;
+  color: var(--gray-700);
+}
+
+.risk-location {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+.risk-code {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--gray-900);
+  color: #e5e7eb;
+  border-radius: 6px;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .risk-badge {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .risk-badge.critical { background: var(--danger); color: white; }

@@ -72,7 +72,30 @@ export function displayRiskDetails(listId, risks) {
   list.innerHTML = '';
   risks.forEach(risk => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="risk-badge ${risk.risk}">${risk.risk}</span><span>${risk.description}</span>`;
+    li.className = 'risk-item';
+    
+    // En-tête avec badge et description
+    const header = document.createElement('div');
+    header.className = 'risk-header';
+    header.innerHTML = `<span class="risk-badge ${risk.risk}">${risk.risk}</span><span class="risk-desc">${risk.description}</span>`;
+    li.appendChild(header);
+    
+    // Location si présente
+    if (risk.location) {
+      const location = document.createElement('div');
+      location.className = 'risk-location';
+      location.textContent = `📍 ${risk.location}`;
+      li.appendChild(location);
+    }
+    
+    // Code snippet si présent
+    if (risk.code) {
+      const code = document.createElement('pre');
+      code.className = 'risk-code';
+      code.textContent = risk.code;
+      li.appendChild(code);
+    }
+    
     list.appendChild(li);
   });
 

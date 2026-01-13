@@ -7,25 +7,29 @@ export function analyzeSQLPatterns() {
   const risks = [];
   const html = document.documentElement.outerHTML;
 
-  // Recherche de messages d'erreur SQL
+  // Recherche de messages d'erreur SQL (patterns stricts pour éviter les faux positifs)
   const sqlErrorPatterns = [
-    /SQL syntax.*MySQL/i,
-    /Warning.*mysql_/i,
-    /PostgreSQL.*ERROR/i,
-    /ORA-\d{5}/i,
-    /Microsoft.*ODBC.*SQL Server/i,
-    /SQLite.*error/i,
-    /mysql_fetch_array/i,
-    /Unclosed quotation mark/i,
-    /quoted string not properly terminated/i
+    { pattern: /You have an error in your SQL syntax/i, db: 'MySQL' },
+    { pattern: /Warning.*mysql_fetch|Warning.*mysql_query/i, db: 'MySQL' },
+    { pattern: /ERROR:\s+syntax error at or near/i, db: 'PostgreSQL' },
+    { pattern: /pg_query\(\)|pg_exec\(\)|PG::Error/i, db: 'PostgreSQL' },
+    { pattern: /ORA-\d{5}:/i, db: 'Oracle' },
+    { pattern: /Microsoft.*ODBC.*SQL Server/i, db: 'SQL Server' },
+    { pattern: /SQLite3::SQLException/i, db: 'SQLite' },
+    { pattern: /SQLSTATE\[\d+\]/i, db: 'PDO/SQL' },
+    { pattern: /mysql_fetch_array\(\)/i, db: 'MySQL' },
+    { pattern: /Unclosed quotation mark after the character string/i, db: 'SQL Server' },
+    { pattern: /quoted string not properly terminated/i, db: 'Oracle' }
   ];
 
-  sqlErrorPatterns.forEach(pattern => {
+  sqlErrorPatterns.forEach(({ pattern, db }) => {
     if (pattern.test(html)) {
+      const match = html.match(pattern);
       risks.push({
         type: 'sql-error-exposed',
         risk: 'critical',
-        description: 'Message d\'erreur SQL exposé (fuite d\'information)'
+        description: `Message d'erreur ${db} exposé (fuite d'information)`,
+        code: match ? match[0].substring(0, 100) : null
       });
     }
   });
@@ -44,10 +48,10 @@ export function analyzeSQLPatterns() {
     }
   }
 
-  // Commentaires HTML avec données sensibles
+  // Commentaires HTML avec données sensibles (plus strict: doit contenir un "=")
   const comments = html.match(/<!--[\s\S]*?-->/g) || [];
   comments.forEach(comment => {
-    if (/password|secret|key|api_key|token/i.test(comment)) {
+    if (/password\s*=|secret\s*=|api_key\s*=|token\s*=/i.test(comment)) {
       risks.push({
         type: 'sensitive-comment',
         risk: 'high',

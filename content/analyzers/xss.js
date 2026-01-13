@@ -1,7 +1,7 @@
 /**
  * Analyse des risques XSS (Cross-Site Scripting)
  */
-import { summarizeRisks } from './utils.js';
+import { summarizeRisks, extractCodeSnippet, getScriptSource } from './utils.js';
 
 export function analyzeXSSRisks() {
   const risks = [];
@@ -24,9 +24,26 @@ export function analyzeXSSRisks() {
 
     dangerousPatterns.forEach(({ pattern, risk, desc }) => {
       if (pattern.test(content)) {
-        risks.push({ type: 'inline-script', risk, description: desc, location: `Script #${index + 1}` });
+        const snippet = extractCodeSnippet(content, pattern);
+        risks.push({
+          type: 'inline-script',
+          risk,
+          description: desc,
+          location: `Script inline #${index + 1}`,
+          code: snippet
+        });
       }
     });
+  });
+  
+  // 1b. Scripts externes - analyser leur contenu si possible
+  const externalScripts = document.querySelectorAll('script[src]');
+  externalScripts.forEach((script) => {
+    const src = script.getAttribute('src');
+    if (!src || src.startsWith('http://') && !src.includes(window.location.hostname)) return;
+    
+    // On ne peut pas lire le contenu des scripts externes directement
+    // Mais on peut noter leur source pour référence
   });
 
   // 2. Event handlers inline

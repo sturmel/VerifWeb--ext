@@ -1,5 +1,55 @@
 /**
- * Utilitaire pour résumer les risques détectés
+ * Utilitaires partagés pour les analyseurs
+ */
+
+/**
+ * Extrait un snippet de code autour d'un pattern trouvé
+ */
+export function extractCodeSnippet(content, pattern, contextChars = 50) {
+  // Reset lastIndex si c'est une regex globale
+  if (pattern.global) pattern.lastIndex = 0;
+  
+  const match = content.match(pattern);
+  if (!match || match.index === undefined) {
+    // Chercher manuellement
+    const strMatch = content.match(new RegExp(pattern.source));
+    if (!strMatch) return null;
+    const index = content.indexOf(strMatch[0]);
+    if (index === -1) return null;
+    
+    const start = Math.max(0, index - contextChars);
+    const end = Math.min(content.length, index + strMatch[0].length + contextChars);
+    let snippet = content.substring(start, end).trim().replace(/\s+/g, ' ');
+    if (start > 0) snippet = '...' + snippet;
+    if (end < content.length) snippet = snippet + '...';
+    return snippet;
+  }
+  
+  const index = match.index;
+  const start = Math.max(0, index - contextChars);
+  const end = Math.min(content.length, index + match[0].length + contextChars);
+  
+  let snippet = content.substring(start, end).trim().replace(/\s+/g, ' ');
+  if (start > 0) snippet = '...' + snippet;
+  if (end < content.length) snippet = snippet + '...';
+  
+  return snippet;
+}
+
+/**
+ * Obtient un sélecteur CSS pour identifier un élément
+ */
+export function getElementSelector(element) {
+  if (element.id) return `#${element.id}`;
+  if (element.className && typeof element.className === 'string') {
+    const classes = element.className.split(' ').filter(c => c).slice(0, 2).join('.');
+    if (classes) return `${element.tagName.toLowerCase()}.${classes}`;
+  }
+  return element.tagName.toLowerCase();
+}
+
+/**
+ * Résume les risques détectés
  */
 export function summarizeRisks(risks, category) {
   if (risks.length === 0) {

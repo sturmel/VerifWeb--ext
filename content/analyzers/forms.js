@@ -1,7 +1,7 @@
 /**
  * Analyse de la sécurité des formulaires
  */
-import { summarizeRisks } from './utils.js';
+import { summarizeRisks, getElementSelector } from './utils.js';
 
 export function analyzeFormSecurity() {
   const risks = [];
@@ -12,26 +12,33 @@ export function analyzeFormSecurity() {
   }
 
   forms.forEach((form, index) => {
+    const formSelector = getElementSelector(form);
+    const formLocation = form.id ? `#${form.id}` : (form.name ? `[name="${form.name}"]` : `Formulaire #${index + 1}`);
+    
     // Détecter si le formulaire est géré par JavaScript (Vue, React, Angular, etc.)
     const hasJsHandler = form.onsubmit !== null ||
                         form.hasAttribute('@submit') || 
                         form.hasAttribute('@submit.prevent') ||
                         form.hasAttribute('v-on:submit') ||
                         form.hasAttribute('ng-submit');
-    // Heuristique: si action vide/absente et pas de method explicite, probablement géré par JS
     const noRealAction = !form.getAttribute('action') || form.getAttribute('action') === '' || form.getAttribute('action') === '#';
     const isJsHandled = hasJsHandler || noRealAction;
+
+    // Générer un aperçu HTML du formulaire
+    const formPreview = `<form${form.id ? ` id="${form.id}"` : ''}${form.action ? ` action="${form.getAttribute('action')}"` : ''} method="${form.method}">`;
 
     // Action HTTP sur page HTTPS
     if (form.action && form.action.startsWith('http://') && window.location.protocol === 'https:') {
       risks.push({
         type: 'insecure-action',
         risk: 'critical',
-        description: `Formulaire #${index + 1}: action vers HTTP (non chiffré)`
+        description: `${formLocation}: action vers HTTP (non chiffré)`,
+        location: formSelector,
+        code: formPreview
       });
     }
 
-    // Données sensibles en GET (seulement si pas géré par JS)
+    // Données sensibles en GET
     const hasPassword = form.querySelector('input[type="password"]');
     const hasEmail = form.querySelector('input[type="email"]');
     
@@ -39,7 +46,9 @@ export function analyzeFormSecurity() {
       risks.push({
         type: 'sensitive-get',
         risk: 'high',
-        description: `Formulaire #${index + 1}: données sensibles en GET`
+        description: `${formLocation}: données sensibles en GET`,
+        location: formSelector,
+        code: formPreview
       });
     }
 
@@ -53,7 +62,9 @@ export function analyzeFormSecurity() {
       risks.push({
         type: 'no-csrf',
         risk: 'medium',
-        description: `Formulaire #${index + 1}: pas de token CSRF détecté`
+        description: `${formLocation}: pas de token CSRF visible`,
+        location: formSelector,
+        code: formPreview
       });
     }
   });
