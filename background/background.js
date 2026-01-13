@@ -58,8 +58,8 @@ async function handleAnalyzeTab(tabId, url) {
     // 3. Cookies Analysis
     results.cookies = await analyzer.analyzeCookies(url);
 
-    // 4. Security Headers
-    let cachedHeaders = headersCache.get(tabId) || {};
+    // 4. Security Headers (from cache - captured when page loaded)
+    const cachedHeaders = headersCache.get(tabId) || {};
     results.headers = analyzer.analyzeHeaders(cachedHeaders);
 
     // 5. Get content script analysis (mixed content, third party, storage, injection)

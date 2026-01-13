@@ -1,5 +1,5 @@
 /**
- * VerifWeb - Popup Script (version modulaire < 200 lignes)
+ * VerifWeb - Popup Script
  */
 
 import { calculateScore, displayScore } from './modules/score.js';
@@ -7,6 +7,8 @@ import { displayTestResult, displayCookiesDetails, displayHeadersDetails, displa
 
 class VerifWebPopup {
   constructor() {
+    this.results = null;
+    this.siteUrl = '';
     this.init();
   }
 
@@ -16,7 +18,11 @@ class VerifWebPopup {
   }
 
   bindEvents() {
-    document.getElementById('refresh-btn').addEventListener('click', () => this.runAnalysis());
+    // Toggle view
+    document.getElementById('btn-problems').addEventListener('click', () => this.setView('problems'));
+    document.getElementById('btn-all').addEventListener('click', () => this.setView('all'));
+    
+    // Expand details on click
     document.querySelectorAll('.test-item').forEach(item => {
       item.addEventListener('click', () => {
         const details = item.querySelector('.test-details');
@@ -26,6 +32,36 @@ class VerifWebPopup {
         }
       });
     });
+  }
+
+  setView(view) {
+    const container = document.getElementById('tests-container');
+    const btnProblems = document.getElementById('btn-problems');
+    const btnAll = document.getElementById('btn-all');
+    const summary = document.getElementById('problems-summary');
+    
+    if (view === 'all') {
+      container.classList.add('show-all');
+      btnAll.classList.add('active');
+      btnProblems.classList.remove('active');
+      summary.classList.add('hidden');
+    } else {
+      container.classList.remove('show-all');
+      btnProblems.classList.add('active');
+      btnAll.classList.remove('active');
+      this.updateProblemsSummary();
+    }
+  }
+
+  updateProblemsSummary() {
+    const problems = document.querySelectorAll('.test-item:not(.is-pass)').length;
+    const summary = document.getElementById('problems-summary');
+    
+    if (problems === 0) {
+      summary.classList.remove('hidden');
+    } else {
+      summary.classList.add('hidden');
+    }
   }
 
   async runAnalysis() {
@@ -40,42 +76,19 @@ class VerifWebPopup {
         return;
       }
 
-      // Rafraîchir la page pour capturer les headers frais
-      await this.refreshAndWait(tab.id);
+      this.siteUrl = tab.url;
 
-      const results = await chrome.runtime.sendMessage({
+      this.results = await chrome.runtime.sendMessage({
         action: 'analyzeTab',
         tabId: tab.id,
         url: tab.url
       });
 
-      this.displayResults(results, tab.url);
+      this.displayResults(this.results, tab.url);
     } catch (error) {
       console.error('Analysis error:', error);
       this.showError(error.message);
     }
-  }
-
-  // Rafraîchit la page et attend que le chargement soit terminé
-  async refreshAndWait(tabId) {
-    return new Promise((resolve) => {
-      const listener = (updatedTabId, changeInfo) => {
-        if (updatedTabId === tabId && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          // Petit délai pour s'assurer que le content script est injecté
-          setTimeout(resolve, 300);
-        }
-      };
-      
-      chrome.tabs.onUpdated.addListener(listener);
-      chrome.tabs.reload(tabId, { bypassCache: true });
-      
-      // Timeout de sécurité (5s max)
-      setTimeout(() => {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }, 5000);
-    });
   }
 
   showLoading(show) {
@@ -87,43 +100,62 @@ class VerifWebPopup {
     this.showLoading(false);
     document.getElementById('site-url').textContent = 'Erreur';
     document.querySelector('.score-value').textContent = '-';
-    document.querySelectorAll('.test-description').forEach(el => el.textContent = message);
   }
 
   displayResults(results, url) {
     this.showLoading(false);
     document.getElementById('site-url').textContent = new URL(url).hostname;
+    document.getElementById('analysis-date').textContent = new Date().toLocaleString('fr-FR');
 
-    // Score
     const score = calculateScore(results);
     displayScore(score);
 
     // Tests de base
-    displayTestResult('test-https', results.https);
-    displayTestResult('test-ssl', results.ssl);
-    displayTestResult('test-cookies', results.cookies);
-    displayTestResult('test-headers', results.headers);
-    displayTestResult('test-mixed-content', results.mixedContent);
-    displayTestResult('test-third-party', results.thirdParty);
-    displayTestResult('test-storage', results.storage);
+    this.setTestStatus('test-https', results.https);
+    this.setTestStatus('test-ssl', results.ssl);
+    this.setTestStatus('test-cookies', results.cookies);
+    this.setTestStatus('test-headers', results.headers);
+    this.setTestStatus('test-mixed-content', results.mixedContent);
+    this.setTestStatus('test-third-party', results.thirdParty);
+    this.setTestStatus('test-storage', results.storage);
 
     // Tests injection
     if (results.injection) {
-      displayTestResult('test-xss', results.injection.xss);
-      displayTestResult('test-forms', results.injection.forms);
-      displayTestResult('test-sql', results.injection.sql);
-      displayTestResult('test-dom-xss', results.injection.domXss);
-      displayTestResult('test-validation', results.injection.validation);
+      this.setTestStatus('test-xss', results.injection.xss);
+      this.setTestStatus('test-forms', results.injection.forms);
+      this.setTestStatus('test-sql', results.injection.sql);
+      this.setTestStatus('test-dom-xss', results.injection.domXss);
+      this.setTestStatus('test-validation', results.injection.validation);
 
       if (results.injection.xss?.details?.length) displayRiskDetails('xss-list', results.injection.xss.details);
       if (results.injection.forms?.details?.length) displayRiskDetails('forms-list', results.injection.forms.details);
       if (results.injection.sql?.details?.length) displayRiskDetails('sql-list', results.injection.sql.details);
     }
 
-    // Détails
+    // Check if injection section has problems
+    const injectionHasProblems = results.injection && 
+      ['xss', 'forms', 'sql', 'domXss', 'validation'].some(k => 
+        results.injection[k]?.status === 'fail' || results.injection[k]?.status === 'warning'
+      );
+    document.querySelector('.section-divider').classList.toggle('is-pass', !injectionHasProblems);
+
     if (results.cookies?.details) displayCookiesDetails(results.cookies.details);
     if (results.headers?.details) displayHeadersDetails(results.headers.details);
+
+    this.updateProblemsSummary();
   }
+
+  setTestStatus(elementId, result) {
+    const element = document.getElementById(elementId);
+    if (!element || !result) return;
+
+    displayTestResult(elementId, result);
+    
+    // Mark as pass or problem
+    const isPassing = result.status === 'pass' || result.status === 'info';
+    element.classList.toggle('is-pass', isPassing);
+  }
+
 }
 
 document.addEventListener('DOMContentLoaded', () => new VerifWebPopup());

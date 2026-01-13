@@ -4,16 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VerifWeb - Security Checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <header>
       <div class="logo">
-        <span class="shield-icon">🛡️</span>
-        <h1>VerifWeb</h1>
+        <img src="https://lugh-web.fr/images/logo_small.webp" alt="Lugh Web" class="logo-img">
+        <div>
+          <h1>Verif<span>Web</span></h1>
+          <p class="tagline">Analyse de sécurité</p>
+        </div>
       </div>
-      <p class="tagline">Analyse de sécurité</p>
     </header>
 
     <div id="loading" class="loading">
@@ -23,16 +28,30 @@
 
     <div id="results" class="results hidden">
       <div class="site-info">
-        <h2 id="site-url">-</h2>
+        <div class="site-details">
+          <h2 id="site-url">-</h2>
+          <p class="site-date" id="analysis-date"></p>
+        </div>
         <div id="global-score" class="score">
           <span class="score-value">-</span>
           <span class="score-label">/ 100</span>
         </div>
       </div>
 
-      <div class="tests-container">
+      <!-- Toggle view -->
+      <div class="view-toggle">
+        <button id="btn-problems" class="toggle-btn active">🚨 Problèmes</button>
+        <button id="btn-all" class="toggle-btn">📋 Tout voir</button>
+      </div>
+
+      <!-- Résumé des problèmes -->
+      <div id="problems-summary" class="problems-summary hidden">
+        <p>✅ Aucun problème détecté</p>
+      </div>
+
+      <div class="tests-container" id="tests-container">
         <!-- HTTPS Check -->
-        <div class="test-item" id="test-https">
+        <div class="test-item" id="test-https" data-test="basic">
           <div class="test-header">
             <span class="test-icon">🔒</span>
             <span class="test-name">Connexion HTTPS</span>
@@ -42,7 +61,7 @@
         </div>
 
         <!-- SSL Certificate -->
-        <div class="test-item" id="test-ssl">
+        <div class="test-item" id="test-ssl" data-test="basic">
           <div class="test-header">
             <span class="test-icon">📜</span>
             <span class="test-name">Certificat SSL</span>
@@ -52,7 +71,7 @@
         </div>
 
         <!-- Cookies Analysis -->
-        <div class="test-item" id="test-cookies">
+        <div class="test-item" id="test-cookies" data-test="basic">
           <div class="test-header">
             <span class="test-icon">🍪</span>
             <span class="test-name">Cookies</span>
@@ -62,12 +81,7 @@
           <div class="test-details hidden">
             <table class="cookies-table">
               <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Secure</th>
-                  <th>HttpOnly</th>
-                  <th>SameSite</th>
-                </tr>
+                <tr><th>Nom</th><th>Secure</th><th>HttpOnly</th><th>SameSite</th></tr>
               </thead>
               <tbody id="cookies-list"></tbody>
             </table>
@@ -75,7 +89,7 @@
         </div>
 
         <!-- Security Headers -->
-        <div class="test-item" id="test-headers">
+        <div class="test-item" id="test-headers" data-test="basic">
           <div class="test-header">
             <span class="test-icon">📋</span>
             <span class="test-name">Headers de sécurité</span>
@@ -88,7 +102,7 @@
         </div>
 
         <!-- Mixed Content -->
-        <div class="test-item" id="test-mixed-content">
+        <div class="test-item" id="test-mixed-content" data-test="basic">
           <div class="test-header">
             <span class="test-icon">⚠️</span>
             <span class="test-name">Contenu mixte</span>
@@ -98,7 +112,7 @@
         </div>
 
         <!-- Third Party Resources -->
-        <div class="test-item" id="test-third-party">
+        <div class="test-item" id="test-third-party" data-test="basic">
           <div class="test-header">
             <span class="test-icon">🌐</span>
             <span class="test-name">Ressources tierces</span>
@@ -108,7 +122,7 @@
         </div>
 
         <!-- Local Storage -->
-        <div class="test-item" id="test-storage">
+        <div class="test-item" id="test-storage" data-test="basic">
           <div class="test-header">
             <span class="test-icon">💾</span>
             <span class="test-name">Stockage local</span>
@@ -118,12 +132,12 @@
         </div>
 
         <!-- Section Injection -->
-        <div class="section-divider">
-          <span>🔥 Tests d'Injection</span>
+        <div class="section-divider" data-test="injection">
+          <span>Tests d'Injection</span>
         </div>
 
         <!-- XSS Analysis -->
-        <div class="test-item" id="test-xss">
+        <div class="test-item" id="test-xss" data-test="injection">
           <div class="test-header">
             <span class="test-icon">💉</span>
             <span class="test-name">Risques XSS</span>
@@ -136,7 +150,7 @@
         </div>
 
         <!-- Form Security -->
-        <div class="test-item" id="test-forms">
+        <div class="test-item" id="test-forms" data-test="injection">
           <div class="test-header">
             <span class="test-icon">📝</span>
             <span class="test-name">Sécurité formulaires</span>
@@ -149,7 +163,7 @@
         </div>
 
         <!-- SQL Injection -->
-        <div class="test-item" id="test-sql">
+        <div class="test-item" id="test-sql" data-test="injection">
           <div class="test-header">
             <span class="test-icon">🗃️</span>
             <span class="test-name">Patterns SQL/Données</span>
@@ -162,7 +176,7 @@
         </div>
 
         <!-- DOM XSS -->
-        <div class="test-item" id="test-dom-xss">
+        <div class="test-item" id="test-dom-xss" data-test="injection">
           <div class="test-header">
             <span class="test-icon">🌳</span>
             <span class="test-name">DOM XSS</span>
@@ -172,7 +186,7 @@
         </div>
 
         <!-- Input Validation -->
-        <div class="test-item" id="test-validation">
+        <div class="test-item" id="test-validation" data-test="injection">
           <div class="test-header">
             <span class="test-icon">✅</span>
             <span class="test-name">Validation des inputs</span>
@@ -181,14 +195,11 @@
           <p class="test-description"></p>
         </div>
       </div>
-
-      <button id="refresh-btn" class="refresh-btn">
-        🔄 Relancer l'analyse
-      </button>
     </div>
 
     <footer>
-      <p>VerifWeb v1.0.0</p>
+      <img src="https://lugh-web.fr/images/logo_small.webp" alt="Lugh Web" class="footer-logo">
+      <p>by <a href="https://lugh-web.fr" target="_blank">Lugh Web</a></p>
     </footer>
   </div>
 
