@@ -59,21 +59,30 @@ async function handleAnalyzeTab(tabId, url) {
     results.cookies = await analyzer.analyzeCookies(url);
 
     // 4. Security Headers
-    const cachedHeaders = headersCache.get(tabId) || {};
+    let cachedHeaders = headersCache.get(tabId) || {};
     results.headers = analyzer.analyzeHeaders(cachedHeaders);
 
-    // 5. Get content script analysis (mixed content, third party, storage)
+    // 5. Get content script analysis (mixed content, third party, storage, injection)
     try {
       const contentAnalysis = await chrome.tabs.sendMessage(tabId, { action: 'analyze' });
       results.mixedContent = contentAnalysis.mixedContent;
       results.thirdParty = contentAnalysis.thirdParty;
       results.storage = contentAnalysis.storage;
+      results.injection = contentAnalysis.injection;
     } catch (error) {
       // Content script might not be loaded
       console.warn('Could not communicate with content script:', error);
       results.mixedContent = { status: 'info', message: 'Analyse non disponible' };
       results.thirdParty = { status: 'info', message: 'Analyse non disponible' };
       results.storage = { status: 'info', message: 'Analyse non disponible' };
+      results.injection = {
+        global: { status: 'info', message: 'Analyse non disponible' },
+        xss: { status: 'info', message: 'Analyse non disponible', details: [] },
+        forms: { status: 'info', message: 'Analyse non disponible', details: [] },
+        sql: { status: 'info', message: 'Analyse non disponible', details: [] },
+        domXss: { status: 'info', message: 'Analyse non disponible', details: [] },
+        validation: { status: 'info', message: 'Analyse non disponible', details: [] }
+      };
     }
 
   } catch (error) {

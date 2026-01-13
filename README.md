@@ -1,10 +1,10 @@
 # VerifWeb - Extension Chrome de Sécurité 🛡️
 
-Extension Chrome pour vérifier la sécurité des sites web. Analyse HTTPS, cookies, headers de sécurité et bien plus.
+Extension Chrome pour vérifier la sécurité des sites web. Analyse HTTPS, cookies, headers de sécurité, détection d'injections et bien plus.
 
 ## 🚀 Fonctionnalités actuelles
 
-### Tests de sécurité implémentés :
+### Tests de sécurité de base :
 
 | Test | Description | Statut |
 |------|-------------|--------|
@@ -15,6 +15,16 @@ Extension Chrome pour vérifier la sécurité des sites web. Analyse HTTPS, cook
 | **Contenu mixte** | Détecte les ressources HTTP chargées sur une page HTTPS | ✅ |
 | **Ressources tierces** | Identifie les domaines tiers chargeant des ressources | ✅ |
 | **Stockage local** | Analyse localStorage et sessionStorage | ✅ |
+
+### 🔥 Tests d'injection :
+
+| Test | Description | Statut |
+|------|-------------|--------|
+| **Risques XSS** | Détecte innerHTML, eval(), document.write, event handlers inline | ✅ |
+| **Sécurité formulaires** | Vérifie CSRF, actions HTTP, données sensibles en GET | ✅ |
+| **Patterns SQL** | Détecte les erreurs SQL exposées, paramètres suspects | ✅ |
+| **DOM XSS** | Analyse les flux source→sink dangereux | ✅ |
+| **Validation inputs** | Vérifie la validation HTML5 des champs | ✅ |
 
 ### Headers de sécurité analysés :
 - Content-Security-Policy (CSP)
