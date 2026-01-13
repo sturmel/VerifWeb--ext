@@ -1,47 +1,64 @@
 /**
- * Analyse DOM-based XSS
+ * VerifWeb - Analyse des risques DOM XSS
  */
-import { summarizeRisks, extractCodeSnippet } from './utils.js';
 
-export function analyzeDOMXSS() {
+window.VerifWeb = window.VerifWeb || {};
+window.VerifWeb.Analyzers = window.VerifWeb.Analyzers || {};
+
+window.VerifWeb.Analyzers.domXss = function() {
   const risks = [];
-  const scripts = document.querySelectorAll('script:not([src])');
-
+  const extractCodeSnippet = window.VerifWeb.extractCodeSnippet;
+  const summarizeRisks = window.VerifWeb.summarizeRisks;
+  
+  // Sources de données non fiables
   const sourcePatterns = [
-    { pattern: /location\.(?:hash|search|href|pathname)/g, name: 'location.*' },
-    { pattern: /document\.(?:URL|documentURI|referrer)/g, name: 'document.URL/referrer' },
-    { pattern: /window\.name/g, name: 'window.name' }
+    { pattern: /location\.(hash|search|href)/g, name: 'location.*' },
+    { pattern: /document\.(URL|referrer)/g, name: 'document.URL/referrer' }
   ];
-
+  
+  // Sinks dangereux
   const sinkPatterns = [
     { pattern: /\.innerHTML\s*=/g, name: 'innerHTML' },
-    { pattern: /\.outerHTML\s*=/g, name: 'outerHTML' },
-    { pattern: /document\.write\s*\(/g, name: 'document.write' },
     { pattern: /eval\s*\(/g, name: 'eval()' },
-    { pattern: /\$\([^)]*\)\.html\s*\(/g, name: 'jQuery.html()' }
+    { pattern: /document\.write/g, name: 'document.write' }
   ];
-
-  scripts.forEach((script, index) => {
-    const content = script.textContent || '';
-    if (!content.trim()) return;
-
-    const foundSources = sourcePatterns.filter(s => s.pattern.test(content));
-    const foundSinks = sinkPatterns.filter(s => s.pattern.test(content));
-
+  
+  const inlineScripts = document.querySelectorAll('script:not([src])');
+  
+  inlineScripts.forEach(function(script, scriptIndex) {
+    const scriptContent = script.textContent || '';
+    
+    // Trouver les sources présentes
+    const foundSources = sourcePatterns.filter(function(source) {
+      return source.pattern.test(scriptContent);
+    });
+    
+    // Trouver les sinks présents
+    const foundSinks = sinkPatterns.filter(function(sink) {
+      return sink.pattern.test(scriptContent);
+    });
+    
+    // Si on a à la fois une source et un sink, c'est un risque
     if (foundSources.length > 0 && foundSinks.length > 0) {
-      // Extraire un snippet du sink (plus dangereux)
-      const sinkMatch = foundSinks[0];
-      const snippet = extractCodeSnippet(content, sinkMatch.pattern);
+      const sourceNames = foundSources.map(function(source) {
+        return source.name;
+      }).join(', ');
+      
+      const sinkNames = foundSinks.map(function(sink) {
+        return sink.name;
+      }).join(', ');
+      
+      const codeSnippet = extractCodeSnippet(scriptContent, foundSinks[0].pattern);
       
       risks.push({
-        type: 'dom-xss-flow',
+        type: 'flow',
         risk: 'high',
-        description: `Flux DOM XSS: ${foundSources.map(s => s.name).join(', ')} → ${foundSinks.map(s => s.name).join(', ')}`,
-        location: `Script inline #${index + 1}`,
-        code: snippet
+        description: 'Flux DOM XSS: ' + sourceNames + ' → ' + sinkNames,
+        location: 'Script inline #' + (scriptIndex + 1),
+        code: codeSnippet
       });
     }
   });
-
+  
   return summarizeRisks(risks, 'DOM XSS');
-}
+};

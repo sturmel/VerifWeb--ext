@@ -1,86 +1,100 @@
 /**
- * Analyse des risques XSS (Cross-Site Scripting)
+ * VerifWeb - Analyse des risques XSS
  */
-import { summarizeRisks, extractCodeSnippet, getScriptSource } from './utils.js';
 
-export function analyzeXSSRisks() {
+window.VerifWeb = window.VerifWeb || {};
+window.VerifWeb.Analyzers = window.VerifWeb.Analyzers || {};
+
+window.VerifWeb.Analyzers.xss = function() {
   const risks = [];
+  const extractCodeSnippet = window.VerifWeb.extractCodeSnippet;
+  const summarizeRisks = window.VerifWeb.summarizeRisks;
   
-  // 1. Scripts inline
+  // Patterns dangereux dans les scripts inline
+  const dangerousPatterns = [
+    { pattern: /innerHTML\s*=/, risk: 'high', description: 'innerHTML (risque XSS)' },
+    { pattern: /eval\s*\(/, risk: 'critical', description: 'eval() - exécution de code' },
+    { pattern: /document\.write\s*\(/, risk: 'high', description: 'document.write' },
+    { pattern: /new\s+Function\s*\(/, risk: 'critical', description: 'new Function()' }
+  ];
+  
+  // Analyser les scripts inline
   const inlineScripts = document.querySelectorAll('script:not([src])');
-  inlineScripts.forEach((script, index) => {
-    const content = script.textContent || '';
+  inlineScripts.forEach(function(script, scriptIndex) {
+    const scriptContent = script.textContent || '';
     
-    const dangerousPatterns = [
-      { pattern: /innerHTML\s*=/, risk: 'high', desc: 'innerHTML (risque XSS)' },
-      { pattern: /outerHTML\s*=/, risk: 'high', desc: 'outerHTML (risque XSS)' },
-      { pattern: /document\.write\s*\(/, risk: 'high', desc: 'document.write (risque XSS)' },
-      { pattern: /eval\s*\(/, risk: 'critical', desc: 'eval() (risque critique)' },
-      { pattern: /new\s+Function\s*\(/, risk: 'critical', desc: 'new Function() (critique)' },
-      { pattern: /setTimeout\s*\(\s*['"`]/, risk: 'high', desc: 'setTimeout avec string' },
-      { pattern: /setInterval\s*\(\s*['"`]/, risk: 'high', desc: 'setInterval avec string' },
-      { pattern: /\.insertAdjacentHTML\s*\(/, risk: 'medium', desc: 'insertAdjacentHTML' }
-    ];
-
-    dangerousPatterns.forEach(({ pattern, risk, desc }) => {
-      if (pattern.test(content)) {
-        const snippet = extractCodeSnippet(content, pattern);
+    dangerousPatterns.forEach(function(config) {
+      if (config.pattern.test(scriptContent)) {
         risks.push({
-          type: 'inline-script',
-          risk,
-          description: desc,
-          location: `Script inline #${index + 1}`,
-          code: snippet
+          type: 'script',
+          risk: config.risk,
+          description: config.description,
+          location: `Script inline #${scriptIndex + 1}`,
+          code: extractCodeSnippet(scriptContent, config.pattern)
         });
       }
     });
   });
   
-  // 1b. Scripts externes - analyser leur contenu si possible
-  const externalScripts = document.querySelectorAll('script[src]');
-  externalScripts.forEach((script) => {
-    const src = script.getAttribute('src');
-    if (!src || src.startsWith('http://') && !src.includes(window.location.hostname)) return;
+  // Analyser les attributs event handlers
+  const eventAttributes = ['onclick', 'onerror', 'onload'];
+  
+  eventAttributes.forEach(function(attribute) {
+    var elementsWithAttribute = Array.from(document.querySelectorAll('[' + attribute + ']'));
     
-    // On ne peut pas lire le contenu des scripts externes directement
-    // Mais on peut noter leur source pour référence
-  });
-
-  // 2. Event handlers inline
-  const eventHandlers = ['onclick', 'onerror', 'onload', 'onmouseover', 'onfocus', 'onsubmit'];
-  eventHandlers.forEach(attr => {
-    const elements = document.querySelectorAll(`[${attr}]`);
-    if (elements.length > 0) {
+    // Filtrer les patterns légitimes (faux positifs)
+    elementsWithAttribute = elementsWithAttribute.filter(function(element) {
+      const handlerCode = element.getAttribute(attribute) || '';
+      const tagName = element.tagName.toLowerCase();
+      
+      // Pattern loadCSS: <link onload="this.onload=null;this.rel='stylesheet'">
+      if (tagName === 'link' && attribute === 'onload') {
+        if (/this\.onload\s*=\s*null/.test(handlerCode)) {
+          return false;
+        }
+      }
+      
+      // Pattern image lazy loading
+      if (tagName === 'img' && attribute === 'onload') {
+        if (/this\.onload\s*=\s*null/.test(handlerCode)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    if (elementsWithAttribute.length) {
+      const firstElement = elementsWithAttribute[0];
+      const tagName = firstElement.tagName.toLowerCase();
+      const handlerCode = firstElement.getAttribute(attribute);
+      const handlerSample = handlerCode.substring(0, 50);
+      const isTruncated = handlerCode.length > 50;
+      
       risks.push({
-        type: 'inline-handler',
+        type: 'handler',
         risk: 'medium',
-        description: `${elements.length} élément(s) avec ${attr}`,
-        count: elements.length
+        description: `${elementsWithAttribute.length}× attribut ${attribute}`,
+        location: `<${tagName}>`,
+        code: `<${tagName} ${attribute}="${handlerSample}${isTruncated ? '...' : ''}">`
       });
     }
   });
-
-  // 3. javascript: URLs
-  const jsUrls = document.querySelectorAll('[href^="javascript:"], [src^="javascript:"]');
-  if (jsUrls.length > 0) {
+  
+  // Analyser les liens javascript:
+  const javascriptLinks = document.querySelectorAll('[href^="javascript:"]');
+  if (javascriptLinks.length) {
+    const firstLink = javascriptLinks[0];
+    const hrefValue = firstLink.getAttribute('href');
+    const hrefSample = hrefValue.substring(0, 60);
+    
     risks.push({
-      type: 'javascript-url',
+      type: 'js-url',
       risk: 'high',
-      description: `${jsUrls.length} lien(s) javascript:`,
-      count: jsUrls.length
+      description: `${javascriptLinks.length} lien(s) javascript:`,
+      code: `<a href="${hrefSample}...">`
     });
   }
-
-  // 4. data: URLs dangereuses
-  const dataUrls = document.querySelectorAll('script[src^="data:"], iframe[src^="data:"]');
-  if (dataUrls.length > 0) {
-    risks.push({
-      type: 'data-url',
-      risk: 'high',
-      description: `${dataUrls.length} ressource(s) data:`,
-      count: dataUrls.length
-    });
-  }
-
+  
   return summarizeRisks(risks, 'XSS');
-}
+};

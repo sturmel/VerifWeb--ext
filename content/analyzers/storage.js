@@ -1,66 +1,56 @@
 /**
- * Analyse du stockage local (localStorage, sessionStorage)
+ * VerifWeb - Analyse du stockage local
  */
-export function analyzeStorage() {
+
+window.VerifWeb = window.VerifWeb || {};
+window.VerifWeb.Analyzers = window.VerifWeb.Analyzers || {};
+
+window.VerifWeb.Analyzers.storage = function() {
   const storageInfo = {
-    localStorage: { count: 0, keys: [] },
-    sessionStorage: { count: 0, keys: [] }
+    localStorage: [],
+    sessionStorage: []
   };
-
+  
   try {
-    // Check localStorage
-    if (window.localStorage) {
-      storageInfo.localStorage.count = localStorage.length;
-      for (let i = 0; i < localStorage.length; i++) {
-        storageInfo.localStorage.keys.push(localStorage.key(i));
-      }
+    for (let index = 0; index < localStorage.length; index++) {
+      storageInfo.localStorage.push(localStorage.key(index));
     }
-
-    // Check sessionStorage
-    if (window.sessionStorage) {
-      storageInfo.sessionStorage.count = sessionStorage.length;
-      for (let i = 0; i < sessionStorage.length; i++) {
-        storageInfo.sessionStorage.keys.push(sessionStorage.key(i));
-      }
+    for (let index = 0; index < sessionStorage.length; index++) {
+      storageInfo.sessionStorage.push(sessionStorage.key(index));
     }
   } catch (error) {
-    return {
-      status: 'info',
-      message: 'Accès au stockage refusé (mode privé ou bloqué)',
-      details: storageInfo
+    return { 
+      status: 'info', 
+      message: 'Accès stockage refusé', 
+      details: storageInfo 
     };
   }
-
-  const totalItems = storageInfo.localStorage.count + storageInfo.sessionStorage.count;
-
-  if (totalItems === 0) {
-    return {
-      status: 'pass',
-      message: 'Aucune donnée stockée localement'
-    };
+  
+  const allKeys = storageInfo.localStorage.concat(storageInfo.sessionStorage);
+  
+  if (!allKeys.length) {
+    return { status: 'pass', message: 'Aucun stockage local' };
   }
-
-  // Check for potentially sensitive data
-  const sensitivePatterns = ['token', 'auth', 'password', 'secret', 'key', 'session', 'credit', 'card'];
-  const allKeys = [...storageInfo.localStorage.keys, ...storageInfo.sessionStorage.keys];
-  const sensitiveKeys = allKeys.filter(key => 
-    sensitivePatterns.some(pattern => key.toLowerCase().includes(pattern))
-  );
-
-  let status = 'info';
-  let message = `${totalItems} élément(s) en stockage local`;
-
-  if (sensitiveKeys.length > 0) {
-    status = 'warning';
-    message = `${totalItems} élément(s) stockés. Attention : ${sensitiveKeys.length} clé(s) potentiellement sensible(s) détectée(s)`;
+  
+  const sensitivePattern = /token|auth|password|secret|key|session/i;
+  const sensitiveKeys = allKeys.filter(function(key) {
+    return sensitivePattern.test(key);
+  });
+  
+  let message;
+  if (sensitiveKeys.length) {
+    message = `${allKeys.length} élément(s), ${sensitiveKeys.length} sensible(s)`;
+  } else {
+    message = `${allKeys.length} élément(s)`;
   }
-
+  
   return {
-    status,
-    message,
+    status: sensitiveKeys.length ? 'warning' : 'info',
+    message: message,
     details: {
-      ...storageInfo,
-      sensitiveKeys
+      localStorage: storageInfo.localStorage,
+      sessionStorage: storageInfo.sessionStorage,
+      sensitive: sensitiveKeys
     }
   };
-}
+};

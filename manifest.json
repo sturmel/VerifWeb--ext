@@ -35,7 +35,18 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/content.js"],
+      "js": [
+        "content/analyzers/utils.js",
+        "content/analyzers/mixedContent.js",
+        "content/analyzers/thirdParty.js",
+        "content/analyzers/storage.js",
+        "content/analyzers/xss.js",
+        "content/analyzers/forms.js",
+        "content/analyzers/sql.js",
+        "content/analyzers/domXss.js",
+        "content/analyzers/validation.js",
+        "content/content.js"
+      ],
       "run_at": "document_end"
     }
   ]

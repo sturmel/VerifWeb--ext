@@ -1,79 +1,62 @@
 /**
- * Analyse des ressources tierces
+ * VerifWeb - Analyse des ressources tierces
  */
-export function analyzeThirdPartyResources() {
-  const currentDomain = window.location.hostname;
+
+window.VerifWeb = window.VerifWeb || {};
+window.VerifWeb.Analyzers = window.VerifWeb.Analyzers || {};
+
+window.VerifWeb.Analyzers.thirdParty = function() {
+  const currentDomain = location.hostname.split('.').slice(-2).join('.');
   const thirdPartyDomains = new Set();
   const thirdPartyResources = [];
-
-  // Helper to check if domain is third-party
-  const isThirdParty = (url) => {
+  
+  function isThirdParty(url) {
     try {
-      const urlObj = new URL(url, window.location.origin);
-      const domain = urlObj.hostname;
-      const currentParts = currentDomain.split('.').slice(-2).join('.');
-      const resourceParts = domain.split('.').slice(-2).join('.');
-      return currentParts !== resourceParts;
-    } catch {
+      const parsedUrl = new URL(url, location.origin);
+      const resourceDomain = parsedUrl.hostname.split('.').slice(-2).join('.');
+      return resourceDomain !== currentDomain;
+    } catch (error) {
       return false;
     }
-  };
-
-  // Check scripts
-  document.querySelectorAll('script[src]').forEach(el => {
-    if (isThirdParty(el.src)) {
-      const domain = new URL(el.src).hostname;
-      thirdPartyDomains.add(domain);
-      thirdPartyResources.push({ type: 'script', domain, src: el.src });
-    }
-  });
-
-  // Check stylesheets
-  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(el => {
-    if (isThirdParty(el.href)) {
-      const domain = new URL(el.href).hostname;
-      thirdPartyDomains.add(domain);
-      thirdPartyResources.push({ type: 'stylesheet', domain, src: el.href });
-    }
-  });
-
-  // Check images
-  document.querySelectorAll('img[src]').forEach(el => {
-    if (isThirdParty(el.src)) {
-      const domain = new URL(el.src).hostname;
-      thirdPartyDomains.add(domain);
-      thirdPartyResources.push({ type: 'image', domain, src: el.src });
-    }
-  });
-
-  // Check iframes
-  document.querySelectorAll('iframe[src]').forEach(el => {
-    if (isThirdParty(el.src)) {
-      const domain = new URL(el.src).hostname;
-      thirdPartyDomains.add(domain);
-      thirdPartyResources.push({ type: 'iframe', domain, src: el.src });
-    }
-  });
-
-  const domainCount = thirdPartyDomains.size;
-
-  if (domainCount === 0) {
-    return {
-      status: 'pass',
-      message: 'Aucune ressource tierce détectée'
-    };
   }
-
+  
+  const resourceSelectors = [
+    { selector: 'script[src]', property: 'src' },
+    { selector: 'link[rel="stylesheet"][href]', property: 'href' },
+    { selector: 'img[src]', property: 'src' },
+    { selector: 'iframe[src]', property: 'src' }
+  ];
+  
+  resourceSelectors.forEach(function(config) {
+    document.querySelectorAll(config.selector).forEach(function(element) {
+      const resourceUrl = element[config.property];
+      if (isThirdParty(resourceUrl)) {
+        const domain = new URL(resourceUrl).hostname;
+        thirdPartyDomains.add(domain);
+        thirdPartyResources.push({ domain: domain, src: resourceUrl });
+      }
+    });
+  });
+  
+  const domainCount = thirdPartyDomains.size;
+  
+  if (domainCount === 0) {
+    return { status: 'pass', message: 'Aucune ressource tierce' };
+  }
+  
   let status = 'pass';
-  if (domainCount > 10) status = 'warning';
-  if (domainCount > 20) status = 'fail';
-
+  if (domainCount > 20) {
+    status = 'fail';
+  } else if (domainCount > 10) {
+    status = 'warning';
+  }
+  
   return {
-    status,
-    message: `${thirdPartyResources.length} ressources provenant de ${domainCount} domaines tiers`,
+    status: status,
+    message: `${thirdPartyResources.length} ressources de ${domainCount} domaines`,
     details: {
       domains: Array.from(thirdPartyDomains),
       resources: thirdPartyResources
     }
   };
-}
+};
