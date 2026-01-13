@@ -28,8 +28,9 @@ export function calculateScore(results) {
   // Tests de base
   ['https', 'ssl', 'cookies', 'headers', 'mixedContent', 'thirdParty', 'storage'].forEach(key => {
     maxPoints += weights[key];
-    if (results[key]?.status === 'pass') totalPoints += weights[key];
-    else if (results[key]?.status === 'warning') totalPoints += weights[key] * 0.5;
+    const status = results[key]?.status;
+    if (status === 'pass' || status === 'info') totalPoints += weights[key];
+    else if (status === 'warning') totalPoints += weights[key] * 0.5;
   });
 
   // Tests injection
@@ -37,8 +38,9 @@ export function calculateScore(results) {
     const map = { xss: 'injectionXss', forms: 'injectionForms', sql: 'injectionSql', domXss: 'injectionDomXss' };
     Object.entries(map).forEach(([key, wKey]) => {
       maxPoints += weights[wKey];
-      if (results.injection[key]?.status === 'pass') totalPoints += weights[wKey];
-      else if (results.injection[key]?.status === 'warning') totalPoints += weights[wKey] * 0.5;
+      const status = results.injection[key]?.status;
+      if (status === 'pass' || status === 'info') totalPoints += weights[wKey];
+      else if (status === 'warning') totalPoints += weights[wKey] * 0.5;
     });
   }
 
