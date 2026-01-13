@@ -5,7 +5,21 @@
 export async function analyzeCookies(url) {
   try {
     const urlObj = new URL(url);
-    const cookies = await chrome.cookies.getAll({ domain: urlObj.hostname });
+    const currentHostname = urlObj.hostname;
+    const allCookies = await chrome.cookies.getAll({ domain: currentHostname });
+    
+    // Filtrer pour ne garder que les cookies du domaine exact
+    const cookies = allCookies.filter(cookie => {
+      const cookieDomain = cookie.domain;
+      
+      // Cookie du domaine exact (lugh-web.fr)
+      if (cookieDomain === currentHostname) return true;
+      
+      // Cookie wildcard du domaine exact (.lugh-web.fr)
+      if (cookieDomain === '.' + currentHostname) return true;
+      
+      return false;
+    });
     
     if (cookies.length === 0) {
       return { status: 'pass', message: 'Aucun cookie détecté sur ce site', details: [] };

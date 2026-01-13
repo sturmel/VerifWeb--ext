@@ -53,7 +53,6 @@ const CONTENT_SCRIPTS = [
   'content/analyzers/forms.js',
   'content/analyzers/sql.js',
   'content/analyzers/domXss.js',
-  'content/analyzers/validation.js',
   'content/content.js'
 ];
 
@@ -112,8 +111,7 @@ async function handleAnalyzeTab(tabId, url) {
         xss: { status: 'info', message: 'Analyse non disponible', details: [] },
         forms: { status: 'info', message: 'Analyse non disponible', details: [] },
         sql: { status: 'info', message: 'Analyse non disponible', details: [] },
-        domXss: { status: 'info', message: 'Analyse non disponible', details: [] },
-        validation: { status: 'info', message: 'Analyse non disponible', details: [] }
+        domXss: { status: 'info', message: 'Analyse non disponible', details: [] }
       };
     }
 

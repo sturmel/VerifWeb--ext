@@ -78,6 +78,10 @@ class VerifWebPopup {
 
       this.siteUrl = tab.url;
 
+      // Rafraîchir la page et attendre qu'elle soit chargée
+      await this.refreshAndWait(tab.id);
+
+      // Lancer l'analyse après le refresh
       this.results = await chrome.runtime.sendMessage({
         action: 'analyzeTab',
         tabId: tab.id,
@@ -89,6 +93,27 @@ class VerifWebPopup {
       console.error('Analysis error:', error);
       this.showError(error.message);
     }
+  }
+
+  /**
+   * Rafraîchit la page et attend qu'elle soit complètement chargée
+   */
+  refreshAndWait(tabId) {
+    return new Promise((resolve) => {
+      // Écouter quand la page est complètement chargée
+      const listener = (updatedTabId, changeInfo) => {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          // Petit délai pour s'assurer que les headers sont capturés
+          setTimeout(resolve, 200);
+        }
+      };
+      
+      chrome.tabs.onUpdated.addListener(listener);
+      
+      // Lancer le refresh
+      chrome.tabs.reload(tabId);
+    });
   }
 
   showLoading(show) {
@@ -125,7 +150,6 @@ class VerifWebPopup {
       this.setTestStatus('test-forms', results.injection.forms);
       this.setTestStatus('test-sql', results.injection.sql);
       this.setTestStatus('test-dom-xss', results.injection.domXss);
-      this.setTestStatus('test-validation', results.injection.validation);
 
       if (results.injection.xss?.details?.length) displayRiskDetails('xss-list', results.injection.xss.details);
       if (results.injection.forms?.details?.length) displayRiskDetails('forms-list', results.injection.forms.details);
@@ -134,7 +158,7 @@ class VerifWebPopup {
 
     // Check if injection section has problems
     const injectionHasProblems = results.injection && 
-      ['xss', 'forms', 'sql', 'domXss', 'validation'].some(k => 
+      ['xss', 'forms', 'sql', 'domXss'].some(k => 
         results.injection[k]?.status === 'fail' || results.injection[k]?.status === 'warning'
       );
     document.querySelector('.section-divider').classList.toggle('is-pass', !injectionHasProblems);

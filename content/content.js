@@ -17,8 +17,7 @@
       xss: Analyzers.xss(),
       forms: Analyzers.forms(),
       sql: Analyzers.sql(),
-      domXss: Analyzers.domXss(),
-      validation: Analyzers.validation()
+      domXss: Analyzers.domXss()
     };
     
     // Calculer le statut global

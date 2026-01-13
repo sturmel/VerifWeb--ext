@@ -75,31 +75,6 @@ window.VerifWeb.Analyzers.forms = function() {
         code: formHtmlPreview
       });
     }
-    
-    // Vérifier token CSRF
-    const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
-    const csrfPattern = /csrf|token|xsrf/i;
-    let hasCsrfToken = false;
-    
-    for (let inputIndex = 0; inputIndex < hiddenInputs.length; inputIndex++) {
-      const inputName = hiddenInputs[inputIndex].name || '';
-      if (csrfPattern.test(inputName)) {
-        hasCsrfToken = true;
-        break;
-      }
-    }
-    
-    const isPostMethod = form.method.toUpperCase() === 'POST';
-    
-    if (!hasCsrfToken && isPostMethod && !isJsHandled) {
-      risks.push({
-        type: 'csrf',
-        risk: 'medium',
-        description: formIdentifier + ': pas de token CSRF visible',
-        location: formIdentifier,
-        code: formHtmlPreview
-      });
-    }
   });
   
   return summarizeRisks(risks, 'Formulaires');
