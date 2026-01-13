@@ -102,3 +102,68 @@ export function displayRiskDetails(listId, risks) {
   const section = list.closest('.test-details');
   if (section) section.classList.remove('hidden');
 }
+
+export function displayStorageDetails(details) {
+  const container = document.getElementById('storage-details');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // localStorage
+  if (details.localStorage?.length) {
+    const localSection = document.createElement('div');
+    localSection.className = 'storage-section';
+    localSection.innerHTML = '<h4>📦 localStorage</h4>';
+    
+    const table = createStorageTable(details.localStorage, details.sensitive);
+    localSection.appendChild(table);
+    container.appendChild(localSection);
+  }
+  
+  // sessionStorage
+  if (details.sessionStorage?.length) {
+    const sessionSection = document.createElement('div');
+    sessionSection.className = 'storage-section';
+    sessionSection.innerHTML = '<h4>⏱️ sessionStorage</h4>';
+    
+    const table = createStorageTable(details.sessionStorage, details.sensitive);
+    sessionSection.appendChild(table);
+    container.appendChild(sessionSection);
+  }
+  
+  if (!details.localStorage?.length && !details.sessionStorage?.length) {
+    container.innerHTML = '<p class="no-data">Aucune donnée stockée</p>';
+  }
+  
+  const section = container.closest('.test-details');
+  if (section) section.classList.remove('hidden');
+}
+
+function createStorageTable(items, sensitiveItems) {
+  const table = document.createElement('table');
+  table.className = 'storage-table';
+  table.innerHTML = '<thead><tr><th>Clé</th><th>Valeur</th></tr></thead>';
+  
+  const tbody = document.createElement('tbody');
+  const sensitiveKeys = sensitiveItems?.map(item => item.key) || [];
+  
+  items.forEach(item => {
+    const row = document.createElement('tr');
+    const isSensitive = sensitiveKeys.includes(item.key);
+    
+    if (isSensitive) {
+      row.className = 'sensitive-row';
+    }
+    
+    row.innerHTML = `
+      <td class="storage-key" title="${item.key}">
+        ${isSensitive ? '⚠️ ' : ''}${item.key.substring(0, 25)}${item.key.length > 25 ? '...' : ''}
+      </td>
+      <td class="storage-value" title="${item.value}">${item.value.substring(0, 40)}${item.value.length > 40 ? '...' : ''}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  
+  table.appendChild(tbody);
+  return table;
+}

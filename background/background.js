@@ -42,6 +42,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
+ * Liste des scripts de contenu à injecter
+ */
+const CONTENT_SCRIPTS = [
+  'content/analyzers/utils.js',
+  'content/analyzers/mixedContent.js',
+  'content/analyzers/thirdParty.js',
+  'content/analyzers/storage.js',
+  'content/analyzers/xss.js',
+  'content/analyzers/forms.js',
+  'content/analyzers/sql.js',
+  'content/analyzers/domXss.js',
+  'content/analyzers/validation.js',
+  'content/content.js'
+];
+
+/**
+ * Injecte les scripts de contenu dans l'onglet
+ */
+async function injectContentScripts(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    files: CONTENT_SCRIPTS
+  });
+}
+
+/**
  * Perform security analysis on a tab
  */
 async function handleAnalyzeTab(tabId, url) {
@@ -62,16 +88,22 @@ async function handleAnalyzeTab(tabId, url) {
     const cachedHeaders = headersCache.get(tabId) || {};
     results.headers = analyzer.analyzeHeaders(cachedHeaders);
 
-    // 5. Get content script analysis (mixed content, third party, storage, injection)
+    // 5. Injecter les scripts et lancer l'analyse
     try {
+      // Injecter les scripts de contenu à la demande
+      await injectContentScripts(tabId);
+      
+      // Petite pause pour s'assurer que les scripts sont chargés
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Lancer l'analyse
       const contentAnalysis = await chrome.tabs.sendMessage(tabId, { action: 'analyze' });
       results.mixedContent = contentAnalysis.mixedContent;
       results.thirdParty = contentAnalysis.thirdParty;
       results.storage = contentAnalysis.storage;
       results.injection = contentAnalysis.injection;
     } catch (error) {
-      // Content script might not be loaded
-      console.warn('Could not communicate with content script:', error);
+      console.warn('Could not run content analysis:', error);
       results.mixedContent = { status: 'info', message: 'Analyse non disponible' };
       results.thirdParty = { status: 'info', message: 'Analyse non disponible' };
       results.storage = { status: 'info', message: 'Analyse non disponible' };

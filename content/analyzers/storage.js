@@ -11,12 +11,30 @@ window.VerifWeb.Analyzers.storage = function() {
     sessionStorage: []
   };
   
+  /**
+   * Tronque une valeur si elle est trop longue
+   */
+  function truncateValue(value, maxLength) {
+    maxLength = maxLength || 100;
+    if (!value) return '';
+    if (value.length <= maxLength) return value;
+    return value.substring(0, maxLength) + '...';
+  }
+  
   try {
     for (let index = 0; index < localStorage.length; index++) {
-      storageInfo.localStorage.push(localStorage.key(index));
+      const key = localStorage.key(index);
+      storageInfo.localStorage.push({
+        key: key,
+        value: truncateValue(localStorage.getItem(key))
+      });
     }
     for (let index = 0; index < sessionStorage.length; index++) {
-      storageInfo.sessionStorage.push(sessionStorage.key(index));
+      const key = sessionStorage.key(index);
+      storageInfo.sessionStorage.push({
+        key: key,
+        value: truncateValue(sessionStorage.getItem(key))
+      });
     }
   } catch (error) {
     return { 
@@ -26,31 +44,31 @@ window.VerifWeb.Analyzers.storage = function() {
     };
   }
   
-  const allKeys = storageInfo.localStorage.concat(storageInfo.sessionStorage);
+  const allItems = storageInfo.localStorage.concat(storageInfo.sessionStorage);
   
-  if (!allKeys.length) {
+  if (!allItems.length) {
     return { status: 'pass', message: 'Aucun stockage local' };
   }
   
   const sensitivePattern = /token|auth|password|secret|key|session/i;
-  const sensitiveKeys = allKeys.filter(function(key) {
-    return sensitivePattern.test(key);
+  const sensitiveItems = allItems.filter(function(item) {
+    return sensitivePattern.test(item.key);
   });
   
   let message;
-  if (sensitiveKeys.length) {
-    message = `${allKeys.length} élément(s), ${sensitiveKeys.length} sensible(s)`;
+  if (sensitiveItems.length) {
+    message = `${allItems.length} élément(s), ${sensitiveItems.length} sensible(s)`;
   } else {
-    message = `${allKeys.length} élément(s)`;
+    message = `${allItems.length} élément(s)`;
   }
   
   return {
-    status: sensitiveKeys.length ? 'warning' : 'info',
+    status: sensitiveItems.length ? 'warning' : 'info',
     message: message,
     details: {
       localStorage: storageInfo.localStorage,
       sessionStorage: storageInfo.sessionStorage,
-      sensitive: sensitiveKeys
+      sensitive: sensitiveItems
     }
   };
 };

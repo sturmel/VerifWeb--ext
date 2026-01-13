@@ -3,7 +3,7 @@
  */
 
 import { calculateScore, displayScore } from './modules/score.js';
-import { displayTestResult, displayCookiesDetails, displayHeadersDetails, displayRiskDetails } from './modules/display.js';
+import { displayTestResult, displayCookiesDetails, displayHeadersDetails, displayRiskDetails, displayStorageDetails } from './modules/display.js';
 
 class VerifWebPopup {
   constructor() {
@@ -141,6 +141,7 @@ class VerifWebPopup {
 
     if (results.cookies?.details) displayCookiesDetails(results.cookies.details);
     if (results.headers?.details) displayHeadersDetails(results.headers.details);
+    if (results.storage?.details) displayStorageDetails(results.storage.details);
 
     this.updateProblemsSummary();
   }
