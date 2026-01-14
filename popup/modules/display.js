@@ -2,6 +2,8 @@
  * Affichage des résultats de tests
  */
 
+import { getFullExplanation } from './riskExplanations.js';
+
 export function getStatusText(status) {
   return { pass: 'OK', warning: 'Attention', fail: 'Échec', info: 'Info' }[status] || status;
 }
@@ -9,6 +11,23 @@ export function getStatusText(status) {
 export function getStatusClass(status) {
   return { pass: 'status-pass', warning: 'status-warning', fail: 'status-fail', info: 'status-info' }[status] || '';
 }
+
+/**
+ * Mapping entre les IDs HTML et les clés d'explication
+ */
+const TEST_TYPE_MAP = {
+  'test-https': 'https',
+  'test-ssl': 'ssl',
+  'test-cookies': 'cookies',
+  'test-headers': 'headers',
+  'test-mixed-content': 'mixedContent',
+  'test-third-party': 'thirdParty',
+  'test-storage': 'storage',
+  'test-xss': 'xss',
+  'test-forms': 'forms',
+  'test-sql': 'sql',
+  'test-dom-xss': 'domXss'
+};
 
 export function displayTestResult(elementId, result) {
   const element = document.getElementById(elementId);
@@ -20,6 +39,42 @@ export function displayTestResult(elementId, result) {
   statusEl.textContent = getStatusText(result.status);
   statusEl.className = 'test-status ' + getStatusClass(result.status);
   descEl.textContent = result.message || '';
+
+  // Ajouter l'explication si pas déjà présente
+  addExplanationToTest(element, elementId, result.status);
+}
+
+/**
+ * Ajoute une explication au test quand il y a un problème
+ */
+function addExplanationToTest(element, elementId, status) {
+  // Ne pas ajouter si déjà présent
+  if (element.querySelector('.test-explanation')) return;
+
+  const testType = TEST_TYPE_MAP[elementId];
+  if (!testType) return;
+
+  const explanation = getFullExplanation(testType);
+  if (!explanation) return;
+
+  // Créer le bloc d'explication
+  const expDiv = document.createElement('div');
+  expDiv.className = 'test-explanation';
+
+  let html = `<p class="exp-simple"><span class="exp-label">💡 En clair : </span>${explanation.simple}</p>`;
+  
+  // Ajouter le risque seulement si pas OK
+  if (status !== 'pass' && status !== 'info' && explanation.risk) {
+    html += `<p class="exp-risk"><span class="exp-label">⚠️ Risque : </span>${explanation.risk}</p>`;
+  }
+  
+  // Toujours afficher le conseil
+  if (explanation.advice) {
+    html += `<p class="exp-advice"><span class="exp-label">💬 Conseil : </span>${explanation.advice}</p>`;
+  }
+
+  expDiv.innerHTML = html;
+  element.appendChild(expDiv);
 }
 
 export function displayCookiesDetails(cookies) {

@@ -4,6 +4,8 @@
 
 import { calculateScore, displayScore } from './modules/score.js';
 import { displayTestResult, displayCookiesDetails, displayHeadersDetails, displayRiskDetails, displayStorageDetails } from './modules/display.js';
+import { generateDocHTML } from './modules/documentation.js';
+import { getFullExplanation } from './modules/riskExplanations.js';
 
 class VerifWebPopup {
   constructor() {
@@ -14,7 +16,28 @@ class VerifWebPopup {
 
   async init() {
     this.bindEvents();
+    this.initDocumentation();
     await this.runAnalysis();
+  }
+
+  initDocumentation() {
+    const docBody = document.getElementById('doc-body');
+    docBody.innerHTML = generateDocHTML();
+
+    // Modal events
+    document.getElementById('help-btn').addEventListener('click', () => {
+      document.getElementById('doc-modal').classList.add('active');
+    });
+
+    document.getElementById('modal-close').addEventListener('click', () => {
+      document.getElementById('doc-modal').classList.remove('active');
+    });
+
+    document.getElementById('doc-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'doc-modal') {
+        document.getElementById('doc-modal').classList.remove('active');
+      }
+    });
   }
 
   bindEvents() {

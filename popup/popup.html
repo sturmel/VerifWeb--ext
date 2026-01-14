@@ -19,6 +19,7 @@
           <p class="tagline">Analyse de sécurité</p>
         </div>
       </div>
+      <button id="help-btn" class="help-btn" title="Aide et documentation">?</button>
     </header>
 
     <div id="loading" class="loading">
@@ -200,5 +201,16 @@
   </div>
 
   <script src="popup.js" type="module"></script>
+  
+  <!-- Modal Documentation -->
+  <div id="doc-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📖 Guide VerifWeb</h2>
+        <button id="modal-close" class="modal-close">×</button>
+      </div>
+      <div id="doc-body"></div>
+    </div>
+  </div>
 </body>
 </html>
